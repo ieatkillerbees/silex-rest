@@ -1,0 +1,19 @@
+{
+    "name": "squinones/silex-rest",
+    "description": "Code Examples for RESTful Webservices with Silex",
+    "require": {
+        "silex/silex": "~1.2",
+        "symfony/serializer": "~2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Squinones\\ApiExample\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Samantha Quiñones",
+            "email": "samantha.quinones@teamaol.com"
+        }
+    ]
+}
