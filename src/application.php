@@ -2,6 +2,7 @@
 
 namespace Squinones\ApiExample;
 
+use Popshack\Silex\Provider\Hal\HalServiceProvider;
 use Silex\Provider\SerializerServiceProvider;
 use Silex\Provider\UrlGeneratorServiceProvider;
 use Squinones\ApiExample\Models\Book;
@@ -41,6 +42,19 @@ $app['converters.book'] = $app->protect(function ($id) use ($app) {
 	return $book;
 });
 
+$app['resources.book'] = $app->protect(function (Book $book) use ($app) {
+	return [
+		'id' => $book->getId(),
+		'title' => $book->getTitle(),
+		'author' => $book->getAuthor(),
+		'_links' => [
+			'self' => [
+				'href' => $app['url_generator']->generate('book', [ 'book' => $book->getId() ])
+			]
+		]
+	];
+});
+
 $app->register(new SerializerServiceProvider());
 $app->register(new UrlGeneratorServiceProvider());
 
@@ -55,7 +69,7 @@ $app->before(function (Request $request) {
 });
 
 $app->after(function (Request $request, Response $response) use ($app) {
-	$response->headers->set('Content-Type', 'application/json');
+	$response->headers->set('Content-Type', 'application/json+hal');
 });
 
 $app->after(function (Request $request, Response $response) use ($app) {
@@ -72,13 +86,21 @@ $app->error(function (HttpException $exc, $code) {
 // -- Controllers
 $app->get('/books', function (Application $app) {
 	$books = $app['repo.books']->getAll();
-	return $app['serializer']->serialize($books, $app['format']);
+	$collection = [
+		"count" => count($books),
+		"total" => count($books),
+		"_embedded" => [
+			"books" => array_map($app['resources.book'], $books),
+		],
+		"_links" => [ 'self' => [ 'href' => $app['url_generator']->generate('books') ] ]
+	];
+	return $app['serializer']->serialize($collection, $app['format']);
 })->after(function (Request $request, Response $response) {
 	$response->setMaxAge(60);
-});
+})->bind('books');
 
 $app->get('/books/{book}', function (Application $app, Book $book) {
-	return $app['serializer']->serialize($book, $app['format']);
+	return $app['serializer']->serialize($app['resources.book']($book), $app['format']);
 })->convert('book', $app['converters.book'])
   ->bind('book');
 
